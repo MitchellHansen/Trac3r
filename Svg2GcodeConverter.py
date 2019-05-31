@@ -22,14 +22,14 @@ class Svg2GcodeConverter:
                 G28         ; home all axes
                 G0 F{1}     ; Set the feed rate
                 G1 Z{0}     ; Move the pen to just above the paper
-                '''.format(self.settings.touch_height + self.settings.raise_height, self.settings.speed)
+                '''.format(1, self.settings.speed)
 
         self.gcode_end = '''
                 G1 Z{0} F7000   ; Raise the pen high up so we can fit a cap onto it
                 M104 S0         ; Set the nozzle to 0
                 G28 X0 Y0       ; Home back to (0,0) for (x,y)
                 M84             ; Turn off the motors
-                '''.format(75)
+                '''.format(1)
 
     # From an input svg file, convert the vector svg paths to gcode tool paths
     def convert_gcode(self):
@@ -70,8 +70,8 @@ class Svg2GcodeConverter:
         max_x_dim = max(bounding_x_max, bounding_x_min)
         max_y_dim = max(bounding_y_max, bounding_y_min)
 
-        scale_x = (self.settings.bed_max_x - self.settings.bed_min_x) / max_x_dim
-        scale_y = (self.settings.bed_max_y - self.settings.bed_min_y) / max_y_dim
+        scale_x = self.settings.canvas_x  / max_x_dim
+        scale_y = self.settings.canvas_y  / max_y_dim
 
         scale = min(scale_x, scale_y)
         print("Scaling to : {:.5f}\n".format(scale))
@@ -91,11 +91,11 @@ class Svg2GcodeConverter:
                 start = part.start
                 end = part.end
 
-                start_x = start.real * scale + self.settings.offset_x
-                start_y = start.imag * scale + self.settings.offset_y
+                start_x = start.real * scale
+                start_y = start.imag * scale
 
-                end_x = end.real * scale + self.settings.offset_x
-                end_y = end.imag * scale + self.settings.offset_y
+                end_x = end.real * scale
+                end_y = end.imag * scale
 
                 # Check to see if the endpoint of the last cycle continues and whether we need to lift the pen or not
                 lift = True
@@ -109,7 +109,7 @@ class Svg2GcodeConverter:
                 previous_y = end.imag
 
                 if lift:
-                    gcode += "G1 Z{:.3f}\n".format(self.settings.raise_height + self.settings.touch_height)
+                    gcode += "G1 Z{:.3f}\n".format(1)
                 else:
                     gcode += ";# NOT LIFTING [{}]\n".format(self.settings.lift_counter)
 
@@ -128,16 +128,16 @@ class Svg2GcodeConverter:
                         evals.append(curve.evaluate(i))
 
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
-                    gcode += "G1 Z{:.3f} \n".format(self.settings.touch_height)
+                    gcode += "G1 Z{:.3f} \n".format(0)
 
                     for i in evals:
                         x = i[0][0]
                         y = i[1][0]
-                        gcode += "G1 X{:.3f} Y{:.3f}\n".format(x * scale + self.settings.offset_x, y * scale + self.settings.offset_y)
+                        gcode += "G1 X{:.3f} Y{:.3f}\n".format(x * scale, y * scale)
 
                 if isinstance(part, Line):
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
-                    gcode += "G1 Z{:.3f} \n".format(self.settings.touch_height)
+                    gcode += "G1 Z{:.3f} \n".format(0)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(end_x, end_y)
 
         gcode += self.gcode_end

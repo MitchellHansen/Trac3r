@@ -3,43 +3,43 @@ from tkinter import filedialog
 from tkinter.ttk import Notebook
 
 from PIL import Image, ImageTk
-import subprocess, os, time
+import os
 
-from Renderer import Renderer
+from GCodeRenderer import Renderer
 from Svg2GcodeConverter import Svg2GcodeConverter
-
+from ImageConverter import ImageConverter
 
 class Settings:
 
     def __init__(self):
 
-        # Height at which the pen touches and draws on the surface
-        self.touch_height = 12
-        # How far to raise the pen tip to raise it off the page
-        self.raise_height = 2
-        # The inherent offset from true 0 we have from the pen bracket
-        self.head_x_offset = 50
-        # XY movement speed
+        # ============ HARDCODED VALUES ===========
+
+        # Canvas size
+        self.canvas_x = 300
+        self.canvas_y = 300
+
+        # The position of the pulley centers in relation to the top left and right of the canvas
+        self.left_pulley_xy_offset =  (-40, 40)
+        self.right_pulley_xy_offset = (40, 40)
+
+        # Diameter of the inner portion of the pulley in millimeters
+        self.pulley_diameter = 45
+
+        # Feed rates
         self.speed = 1000
+
         # Whether we render lift markers
         self.lift_markers = False
 
-        # X and Y offsets to place the image on A11 paper
-        self.offset_x = 70 + self.head_x_offset
-        self.offset_y = 20
+        # ============ CALCULATED VALUES ===========
 
-        # Bed dimensions to fit A11 paper
-        self.bed_max_x = 300 - 70 + self.head_x_offset + 20  # 20 is to adjust for the misalignment of print bed
-        self.bed_min_x = self.offset_x
-        self.bed_max_y = 280
-        self.bed_min_y = 20
-
-        self.bed_actual_x = 300
-        self.bed_actual_y = 300
-
-        self.lift_counter = 0
+        self.distance_between_centers = abs(self.left_pulley_xy_offset[0]) + self.canvas_x + self.right_pulley_xy_offset[0]
 
 
+
+
+# Main GUI class and program entry point
 class Tracer(Tk):
 
     def update_highpass_value(self, value):
@@ -47,6 +47,7 @@ class Tracer(Tk):
 
     def update_blur_value(self, value):
         self.blur = value
+
 
     def __init__(self):
 
@@ -58,15 +59,21 @@ class Tracer(Tk):
         if not os.path.exists("tmp"):
             os.makedirs("tmp")
 
+        # Settings for the printer are loaded, TODO: Customize for our dual motor printer
         self.settings = Settings()
 
+        # Image filename which we are converting
         self.filename = None
 
+        # GCODE -> SVG,PNG renderer
         self.cairo_renderer = Renderer(self.settings)
+
+        # SVG -> GCODE converter
         self.gcode_converter = Svg2GcodeConverter(self.settings)
 
-        self.highpass_filter = 0
-        self.blur = 0
+        # FILE -> SVG converter
+        self.image_converter = ImageConverter()
+        self.image_converter_settings = ImageConverter.ConverterSettings()
 
         self.label = None
         self.pix = None
@@ -95,17 +102,18 @@ class Tracer(Tk):
         self.lift_markers_checkbox.pack()
 
         self.highpass_slider = Scale(self.rightframe, command=self.update_highpass_value, resolution=0.1, to=15)
-        self.highpass_slider.set(self.highpass_filter)
+        self.highpass_slider.set(self.image_converter_settings.highpass_filter)
         self.highpass_slider.pack()
 
         self.blur_slider = Scale(self.rightframe, command=self.update_blur_value, resolution=0.1, to=5)
-        self.blur_slider.set(self.blur)
+        self.blur_slider.set(self.image_converter_settings.blur)
         self.blur_slider.pack()
 
         # Start TK
         self.mainloop()
 
     def file_select_callback(self):
+
         filepath = filedialog.askopenfilename(initialdir=".", title="Select file",
                                                    filetypes=(("jpeg files", "*.jpg"), ("all files", "*.*")))
 
@@ -120,7 +128,7 @@ class Tracer(Tk):
         self.render()
 
     def render(self):
-        self.convert_image(self.filename)
+        self.image_converter.convert_image(self.filename)
         self.gcode_converter.convert_gcode()
 
         self.cairo_renderer.clear_screen()
@@ -150,48 +158,7 @@ class Tracer(Tk):
         self.label1.pack(expand=True, fill="both")
 
 
-    # This function takes a file and runs it through mogrify, mkbitmap, and finally potrace.
-    # The flow of the intermediate files is
-    # input_file.extension  : The input file
-    # input_file.bmp        : The input file converted to bmp
-    # input_file-n.bmp      : The bmp file after running through some filters
-    # input_file.svg        : The output svg render
-    def convert_image(self, file_name):
 
-        base_name = file_name.split(".")[0]
-
-        print("Converting input file [{}]".format(file_name))
-
-        print("Running mogrify...")
-        start = time.time()
-        subprocess.call(["mogrify", "-format", "bmp", "input-images/{}".format(file_name)])
-        print("Run took [{:.2f}] seconds".format(time.time() - start))
-
-        print("Running mkbitmap...")
-        start = time.time()
-        mkbitmap_args = ["mkbitmap", "input-images/{}.bmp".format(base_name),
-                         "-o", "input-images/{}-n.pbm".format(base_name)]
-        if self.highpass_filter > 0:
-            mkbitmap_args.append(["-f", self.highpass_filter])
-
-        if self.blur > 0:
-            mkbitmap_args.append(["-b", self.blur])
-
-
-        subprocess.call(mkbitmap_args)
-        print("Run took [{:.2f}] seconds".format(time.time() - start))
-
-        print("Running potrace...")
-        start = time.time()
-        subprocess.call(["potrace",
-                         #"-t", "0.1",
-                         "-z", "white",
-                         "-b", "svg",
-                         "input-images/{}-n.pbm".format(base_name),
-                         "--rotate", "0",
-                         "-o", "tmp/conversion-output.svg",
-                         ])
-        print("Run took [{:.2f}] seconds\n".format(time.time() - start))
 
 
 if __name__ == "__main__":

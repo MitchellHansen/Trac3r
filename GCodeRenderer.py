@@ -1,33 +1,25 @@
 import cairo, os, math
 
-
+# This renderer takes the generated GCODE and turns it into two images
+# One is an SVG of the tool paths, the other a png image
 class Renderer():
 
     def __init__(self, settings):
 
         self.settings = settings
 
-        self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.bed_actual_x, self.settings.bed_actual_y)
+        self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.canvas_x, self.settings.canvas_y)
         self.svg_context = cairo.Context(self.svg_surface)
         self.svg_context.scale(1, 1)
         self.svg_context.set_line_width(0.1)
 
     def clear_screen(self):
 
-        self.svg_context.rectangle(0, 0, self.settings.bed_actual_x, self.settings.bed_actual_y)
+        self.svg_context.rectangle(0, 0, self.settings.canvas_x, self.settings.canvas_y)
         self.svg_context.set_source_rgba(1, 1, 1, 1.0)
         self.svg_context.fill()
         self.svg_context.set_source_rgba(0, 0, 0, 1.0)
         self.svg_context.stroke()
-
-        self.svg_context.set_source_rgba(1, 0, 0, 1.0)
-        self.svg_context.line_to(self.settings.bed_min_x - self.settings.head_x_offset, self.settings.bed_min_y)
-        self.svg_context.line_to(self.settings.bed_max_x - self.settings.head_x_offset, self.settings.bed_min_y)
-        self.svg_context.line_to(self.settings.bed_max_x - self.settings.head_x_offset, self.settings.bed_max_y)
-        self.svg_context.line_to(self.settings.bed_min_x - self.settings.head_x_offset, self.settings.bed_max_y)
-        self.svg_context.line_to(self.settings.bed_min_x - self.settings.head_x_offset, self.settings.bed_min_y)
-        self.svg_context.stroke()
-        self.svg_context.set_source_rgba(0, 0, 0, 1.0)
 
     # Render GCODE from the gcode-output.gcode output file that was generated in convert_gcode
     def render_gcode(self):
@@ -60,14 +52,16 @@ class Renderer():
                         y = float(operand[1:])
                         if y > largest_y: largest_y = y
                         if y < smallest_y: smallest_y = y
-                    elif operand.startswith("Z{}".format(self.settings.touch_height + self.settings.raise_height)):
+                    elif operand.startswith("Z{}".format(1)):
 
                         # signify a lift
                         if prev_x is not None and prev_y is not None and self.settings.lift_markers:
 
-                            self.svg_context.arc(prev_x - self.settings.head_x_offset, prev_y, 0.5, 0, 2 * math.pi)
+                            # draw a cirlce at the lift
+                            self.svg_context.arc(prev_x, prev_y, 0.5, 0, 2 * math.pi)
                             self.svg_context.stroke()
 
+                            # And draw the lift number
                             self.svg_context.set_source_rgba(1, 1, 1, 1.0)
                             self.svg_context.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL,
                                                               cairo.FONT_WEIGHT_NORMAL)
@@ -103,15 +97,6 @@ class Renderer():
             print("X_UNDERFLOW")
         if smallest_y < self.settings.bed_min_y:
             print("Y_UNDERFLOW")
-
-        self.svg_context.set_source_rgba(0, 0, 1, 1.0)
-        self.svg_context.line_to(smallest_x - self.settings.head_x_offset, smallest_y)
-        self.svg_context.line_to(largest_x - self.settings.head_x_offset, smallest_y)
-        self.svg_context.line_to(largest_x - self.settings.head_x_offset, largest_y)
-        self.svg_context.line_to(smallest_x - self.settings.head_x_offset, largest_y)
-        self.svg_context.line_to(smallest_x - self.settings.head_x_offset, smallest_y)
-        self.svg_context.stroke()
-        self.svg_context.set_source_rgba(0, 0, 0, 1.0)
 
         self.save_surfaces()
         # self.init_surfaces()
