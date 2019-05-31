@@ -14,12 +14,8 @@ class Svg2GcodeConverter:
 
         self.gcode_preamble = '''
                 G91         ; Set to relative mode for the initial pen lift
-                G1 Z20      ; Lift head by 20
+                G1 Z1       ; Lift head by 1
                 G90         ; Set back to absolute position mode
-                M107        ; Fan off
-                M190 S0     ; Set bed temp
-                M104 S0     ; Set nozzle temp
-                G28         ; home all axes
                 G0 F{1}     ; Set the feed rate
                 G1 Z{0}     ; Move the pen to just above the paper
                 '''.format(1, self.settings.speed)

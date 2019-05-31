@@ -31,7 +31,7 @@ class Settings:
 
         # Whether we render lift markers
         self.lift_markers = False
-
+        self.lift_counter = 0
         # ============ CALCULATED VALUES ===========
 
         self.distance_between_centers = abs(self.left_pulley_xy_offset[0]) + self.canvas_x + self.right_pulley_xy_offset[0]
@@ -128,7 +128,7 @@ class Tracer(Tk):
         self.render()
 
     def render(self):
-        self.image_converter.convert_image(self.filename)
+        self.image_converter.convert_image(self.filename, self.image_converter_settings)
         self.gcode_converter.convert_gcode()
 
         self.cairo_renderer.clear_screen()
@@ -156,10 +156,6 @@ class Tracer(Tk):
         self.label1 = Label(self.f2, image=self.pic)
         self.n.add(self.f2, text="Original")
         self.label1.pack(expand=True, fill="both")
-
-
-
-
 
 if __name__ == "__main__":
     Tracer()

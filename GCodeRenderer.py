@@ -78,8 +78,8 @@ class Renderer():
                         y = None
 
             if (prev_x != x and prev_x is not None) or (prev_y != y and prev_y is not None):
-                self.svg_context.line_to(prev_x - self.settings.head_x_offset, prev_y)
-                self.svg_context.line_to(x - self.settings.head_x_offset, y)
+                self.svg_context.line_to(prev_x, prev_y)
+                self.svg_context.line_to(x, y)
                 self.svg_context.stroke()
 
         print("Largest  X : " + str(largest_x))
@@ -88,14 +88,14 @@ class Renderer():
         print("Largest  Y : " + str(largest_y))
         print("Smallest Y : " + str(smallest_y))
 
-        if largest_x > self.settings.bed_max_x:
+        if largest_x > self.settings.canvas_x:
             print("X OVERFLOW")
-        if largest_y > self.settings.bed_max_y:
+        if largest_y > self.settings.canvas_y:
             print("Y OVERFLOW")
 
-        if smallest_x < self.settings.bed_min_x:
+        if smallest_x < 0:
             print("X_UNDERFLOW")
-        if smallest_y < self.settings.bed_min_y:
+        if smallest_y < 0:
             print("Y_UNDERFLOW")
 
         self.save_surfaces()
@@ -108,7 +108,7 @@ class Renderer():
         # Save the SVG so we can view it, then immediately reopen it so it's ready for a re-render
         self.svg_surface.finish()
         os.rename("tmp/rendered-output-t.svg", "tmp/rendered-output.svg")
-        self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.bed_actual_x, self.settings.bed_actual_y)
+        self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.canvas_x, self.settings.canvas_y)
         self.svg_context = cairo.Context(self.svg_surface)
 
     # def render(self):
