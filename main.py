@@ -1,3 +1,4 @@
+from math import sqrt
 from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import Notebook
@@ -8,6 +9,26 @@ import os
 from GCodeRenderer import Renderer
 from Svg2GcodeConverter import Svg2GcodeConverter
 from ImageConverter import ImageConverter
+from Simulator import Simulator
+
+
+def xy_to_radial(settings, current_xy, dest_xy, pulley_diameter):
+
+    # maybe check for the distance of the move. Split it up into multiple to avoid distortion
+
+    # get the current length of the left pulley wire
+    b = (settings.left_pulley_x_offset - settings.pulley_diameter + current_xy[0])
+    a = settings.pulley_y_droop
+
+    length = sqrt(pow(a, 2) + pow(b, 2))
+    # get the current length of the right pulley wire
+
+
+    # get the desired length of the left pulley wire
+    # get the desired length of the right pulley wire
+
+    return
+
 
 class Settings:
 
@@ -16,12 +37,13 @@ class Settings:
         # ============ HARDCODED VALUES ===========
 
         # Canvas size
-        self.canvas_x = 300
-        self.canvas_y = 300
+        self.canvas_x = 700
+        self.canvas_y = 700
 
         # The position of the pulley centers in relation to the top left and right of the canvas
-        self.left_pulley_xy_offset =  (-40, 40)
-        self.right_pulley_xy_offset = (40, 40)
+        self.left_pulley_x_offset  = -40
+        self.right_pulley_x_offset =  40
+        self.pulley_y_droop = 60
 
         # Diameter of the inner portion of the pulley in millimeters
         self.pulley_diameter = 45
@@ -34,9 +56,7 @@ class Settings:
 
         # ============ CALCULATED VALUES ===========
 
-        self.distance_between_centers = abs(self.left_pulley_xy_offset[0]) + self.canvas_x + self.right_pulley_xy_offset[0]
-
-
+        self.distance_between_centers = abs(self.left_pulley_x_offset) + self.canvas_x + self.right_pulley_x_offset
 
 
 # Main GUI class and program entry point
@@ -92,11 +112,14 @@ class Tracer(Tk):
         self.rightframe = Frame(self)
         self.rightframe.pack(side=RIGHT)
 
-        self.button = Button(self.rightframe, text="Select Image", command=self.file_select_callback)
-        self.button.pack()
+        self.image_select_button = Button(self.rightframe, text="Select Image", command=self.file_select_callback)
+        self.image_select_button.pack()
 
-        self.button = Button(self.rightframe, text="Re-Render", command=self.render)
-        self.button.pack()
+        self.rerender_button = Button(self.rightframe, text="Re-Render", command=self.render)
+        self.rerender_button.pack()
+
+        self.render_simulation_button = Button(self.rightframe, text="Render Simulation", command=self.render_simulation)
+        self.render_simulation_button.pack()
 
         self.lift_markers_checkbox = Checkbutton(self.rightframe, text="Lift Markers", command=self.cairo_renderer.toggle_flip_markers)
         self.lift_markers_checkbox.pack()
@@ -157,8 +180,10 @@ class Tracer(Tk):
         self.n.add(self.f2, text="Original")
         self.label1.pack(expand=True, fill="both")
 
+    def render_simulation(self):
 
-
+        simulator = Simulator()
+        simulator.render()
 
 
 if __name__ == "__main__":
