@@ -1,4 +1,5 @@
 import cairo, os, math
+import Svg2GcodeConverter
 
 # This renderer takes the generated GCODE and turns it into two images
 # One is an SVG of the tool paths, the other a png image
@@ -28,8 +29,8 @@ class Renderer():
 
         largest_x = 0
         largest_y = 0
-        smallest_x = 300
-        smallest_y = 300
+        smallest_x = 99999999
+        smallest_y = 99999999
         x = None
         y = None
 
@@ -78,8 +79,12 @@ class Renderer():
                         y = None
 
             if (prev_x != x and prev_x is not None) or (prev_y != y and prev_y is not None):
-                self.svg_context.line_to(prev_x, prev_y)
-                self.svg_context.line_to(x, y)
+                prev = Svg2GcodeConverter.untriangulate_lengths(self.settings, prev_x, prev_y)
+                this = Svg2GcodeConverter.untriangulate_lengths(self.settings, x, y)
+                #self.svg_context.line_to(prev_x, prev_y)
+                #self.svg_context.line_to(x, y)
+                self.svg_context.line_to(prev[0], prev[1])
+                self.svg_context.line_to(this[0], this[1])
                 self.svg_context.stroke()
 
         print("Largest  X : " + str(largest_x))

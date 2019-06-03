@@ -1,4 +1,3 @@
-from math import sqrt
 from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import Notebook
@@ -11,23 +10,6 @@ from Svg2GcodeConverter import Svg2GcodeConverter
 from ImageConverter import ImageConverter
 from Simulator import Simulator
 
-
-def xy_to_radial(settings, current_xy, dest_xy, pulley_diameter):
-
-    # maybe check for the distance of the move. Split it up into multiple to avoid distortion
-
-    # get the current length of the left pulley wire
-    b = (settings.left_pulley_x_offset - settings.pulley_diameter + current_xy[0])
-    a = settings.pulley_y_droop
-
-    length = sqrt(pow(a, 2) + pow(b, 2))
-    # get the current length of the right pulley wire
-
-
-    # get the desired length of the left pulley wire
-    # get the desired length of the right pulley wire
-
-    return
 
 
 class Settings:

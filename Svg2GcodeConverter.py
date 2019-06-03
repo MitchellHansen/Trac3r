@@ -1,7 +1,45 @@
 from svgpathtools import svg2paths, Line, QuadraticBezier, CubicBezier
 import numpy as np
-import bezier
+import bezier, math
 
+def triangulate_lengths(settings, dest_xy):
+
+    # maybe check for the distance of the move. Split it up into multiple to avoid distortion
+
+    # # get the current length of the left pulley wire
+    # b = (settings.left_pulley_x_offset + (settings.pulley_diameter/2) + current_xy[0])
+    # a = current_xy[1] + settings.pulley_y_droop
+    # left_line_length = sqrt(pow(a, 2) + pow(b, 2))
+    #
+    # # get the current length of the right pulley wire
+    # b = (settings.right_pulley_x_offset - (settings.pulley_diameter/2) + current_xy[0])
+    # a = current_xy[1] + settings.pulley_y_droop
+    # right_line_length = sqrt(pow(a, 2) + pow(b, 2))
+
+    # get the desired length of the left pulley wire
+    b = (settings.left_pulley_x_offset + (settings.pulley_diameter/2) + dest_xy[0])
+    a = dest_xy[1] + settings.pulley_y_droop
+    desired_left_line_length = math.sqrt(pow(a, 2) + pow(b, 2))
+
+    # get the desired length of the right pulley wire
+    b = (settings.right_pulley_x_offset - (settings.pulley_diameter/2) + dest_xy[0])
+    a = dest_xy[1] + settings.pulley_y_droop
+    desired_right_line_length = math.sqrt(pow(a, 2) + pow(b, 2))
+
+    return desired_left_line_length, desired_right_line_length
+
+
+def untriangulate_lengths(settings, x, y):
+    result = [0, 0]
+
+    if x > 0:
+        result[0] = (settings.distance_between_centers * settings.distance_between_centers - y * y + x * x) / (2 * x)
+
+    try:
+        result[1] = math.sqrt(settings.distance_between_centers * settings.distance_between_centers - result[0] * result[0])
+    except:
+        result[1] = 10
+    return result
 
 class Svg2GcodeConverter:
 
@@ -15,16 +53,12 @@ class Svg2GcodeConverter:
         self.gcode_preamble = '''
                 G91         ; Set to relative mode for the initial pen lift
                 G1 Z1       ; Lift head by 1
-                G90         ; Set back to absolute position mode
                 G0 F{1}     ; Set the feed rate
                 G1 Z{0}     ; Move the pen to just above the paper
                 '''.format(1, self.settings.speed)
 
         self.gcode_end = '''
-                G1 Z{0} F7000   ; Raise the pen high up so we can fit a cap onto it
-                M104 S0         ; Set the nozzle to 0
-                G28 X0 Y0       ; Home back to (0,0) for (x,y)
-                M84             ; Turn off the motors
+                G1 Z{0} F7000   ; Raise the pen
                 '''.format(1)
 
     # From an input svg file, convert the vector svg paths to gcode tool paths
@@ -76,6 +110,8 @@ class Svg2GcodeConverter:
         gcode = ""
         gcode += self.gcode_preamble
 
+        current_position = (self.settings.canvas_x/2, self.settings.pulley_y_droop)
+
         # Walk through the paths and create the GCODE
         for path in paths:
 
@@ -107,7 +143,7 @@ class Svg2GcodeConverter:
                 if lift:
                     gcode += "G1 Z{:.3f}\n".format(1)
                 else:
-                    gcode += ";# NOT LIFTING [{}]\n".format(self.settings.lift_counter)
+                    gcode += "; NOT LIFTING [{}]\n".format(self.settings.lift_counter)
 
                 if isinstance(part, CubicBezier):
 
@@ -123,18 +159,25 @@ class Svg2GcodeConverter:
                     for i in pos:
                         evals.append(curve.evaluate(i))
 
-                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
+
+                    #gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
+
+                    lengths = triangulate_lengths(self.settings, (start_x, start_y))
+                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(lengths[0], lengths[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
 
                     for i in evals:
                         x = i[0][0]
                         y = i[1][0]
-                        gcode += "G1 X{:.3f} Y{:.3f}\n".format(x * scale, y * scale)
+                        tmp_len = triangulate_lengths(self.settings, (x * scale, y * scale))
+                        gcode += "G1 X{:.3f} Y{:.3f}\n".format(tmp_len[0], tmp_len[1])
 
                 if isinstance(part, Line):
-                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
+                    start_len = triangulate_lengths(self.settings, (start_x, start_y))
+                    end_len = triangulate_lengths(self.settings, (end_x, end_y))
+                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_len[0], start_len[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
-                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(end_x, end_y)
+                    gcode += "G1 X{:.3f} Y{:.3f}\n".format(end_len[0], end_len[1])
 
         gcode += self.gcode_end
 
