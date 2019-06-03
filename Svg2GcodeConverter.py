@@ -2,19 +2,8 @@ from svgpathtools import svg2paths, Line, QuadraticBezier, CubicBezier
 import numpy as np
 import bezier, math
 
+
 def triangulate_lengths(settings, dest_xy):
-
-    # maybe check for the distance of the move. Split it up into multiple to avoid distortion
-
-    # # get the current length of the left pulley wire
-    # b = (settings.left_pulley_x_offset + (settings.pulley_diameter/2) + current_xy[0])
-    # a = current_xy[1] + settings.pulley_y_droop
-    # left_line_length = sqrt(pow(a, 2) + pow(b, 2))
-    #
-    # # get the current length of the right pulley wire
-    # b = (settings.right_pulley_x_offset - (settings.pulley_diameter/2) + current_xy[0])
-    # a = current_xy[1] + settings.pulley_y_droop
-    # right_line_length = sqrt(pow(a, 2) + pow(b, 2))
 
     # get the desired length of the left pulley wire
     b = (settings.left_pulley_x_offset + (settings.pulley_diameter/2) + dest_xy[0])
@@ -34,12 +23,13 @@ def untriangulate_lengths(settings, x, y):
 
     if x > 0:
         result[0] = (settings.distance_between_centers * settings.distance_between_centers - y * y + x * x) / (2 * x)
-
     try:
         result[1] = math.sqrt(settings.distance_between_centers * settings.distance_between_centers - result[0] * result[0])
     except:
         result[1] = 10
+
     return result
+
 
 class Svg2GcodeConverter:
 
