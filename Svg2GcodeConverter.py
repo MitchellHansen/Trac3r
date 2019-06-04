@@ -45,6 +45,8 @@ class Svg2GcodeConverter:
                 G1 Z1       ; Lift head by 1
                 G0 F{1}     ; Set the feed rate
                 G1 Z{0}     ; Move the pen to just above the paper
+                G90
+                G92 X337.87 Y372.36
                 '''.format(1, self.settings.speed)
 
         self.gcode_end = '''

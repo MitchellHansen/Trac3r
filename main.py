@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 import os
 
 from GCodeRenderer import Renderer
-from Svg2GcodeConverter import Svg2GcodeConverter
+from Svg2GcodeConverter import Svg2GcodeConverter, triangulate_lengths, untriangulate_lengths
 from ImageConverter import ImageConverter
 from Simulator import Simulator
 
@@ -19,8 +19,8 @@ class Settings:
         # ============ HARDCODED VALUES ===========
 
         # Canvas size
-        self.canvas_x = 700
-        self.canvas_y = 700
+        self.canvas_x = 300
+        self.canvas_y = 300
 
         # The position of the pulley centers in relation to the top left and right of the canvas
         self.left_pulley_x_offset  = -40
@@ -167,6 +167,11 @@ class Tracer(Tk):
         simulator = Simulator()
         simulator.render()
 
+# settings = Settings()
+# print(triangulate_lengths(settings, (350, 0)))
+# print(triangulate_lengths(settings, (300, 300)))
+
+
 if __name__ == "__main__":
-    Tracer()
+   Tracer()
 
