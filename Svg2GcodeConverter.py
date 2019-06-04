@@ -5,30 +5,32 @@ import bezier, math
 
 def triangulate_lengths(settings, dest_xy):
 
-    # get the desired length of the left pulley wire
-    b = (settings.left_pulley_x_offset + (settings.pulley_diameter/2) + dest_xy[0])
-    a = dest_xy[1] + settings.pulley_y_droop
-    desired_left_line_length = math.sqrt(pow(a, 2) + pow(b, 2))
+    left_pulley_position  = (settings.left_pulley_x_offset, -settings.pulley_y_droop)
+    right_pulley_position = (settings.right_pulley_x_offset + settings.canvas_x, -settings.pulley_y_droop)
 
-    # get the desired length of the right pulley wire
-    b = (settings.right_pulley_x_offset - (settings.pulley_diameter/2) + dest_xy[0])
-    a = dest_xy[1] + settings.pulley_y_droop
-    desired_right_line_length = math.sqrt(pow(a, 2) + pow(b, 2))
+    right_squared_x = pow(right_pulley_position[0] - dest_xy[0], 2)
+    right_squared_y = pow(right_pulley_position[1] - dest_xy[1], 2)
 
-    return desired_left_line_length, desired_right_line_length
+    left_squared_x = pow(left_pulley_position[0] - dest_xy[0], 2)
+    left_squared_y = pow(left_pulley_position[1] - dest_xy[1], 2)
+
+    right_pulley_length = math.sqrt(right_squared_x + right_squared_y)
+    left_pulley_length = math.sqrt(left_squared_x + left_squared_y)
+
+    return left_pulley_length, right_pulley_length
 
 
 def untriangulate_lengths(settings, x, y):
     result = [0, 0]
 
-    if x > 0:
-        result[0] = (settings.distance_between_centers * settings.distance_between_centers - y * y + x * x) / (2 * x)
-    try:
-        result[1] = math.sqrt(settings.distance_between_centers * settings.distance_between_centers - result[0] * result[0])
-    except:
-        result[1] = 10
+    r0 = x
+    r1 = y
+    r2 = settings.distance_between_centers
 
-    return result
+    a = (pow(r0, 2) - pow(r1, 2) + pow(r2, 2)) / (2 * r2)
+    h = math.sqrt(pow(r0, 2) - pow(a, 2))
+
+    return a, h
 
 
 class Svg2GcodeConverter:
@@ -40,14 +42,16 @@ class Svg2GcodeConverter:
         # First cycle base case flag
         self.started = False
 
+        starting_xy = triangulate_lengths(self.settings, (self.settings.canvas_x/2, 0))
+
         self.gcode_preamble = '''
                 G91         ; Set to relative mode for the initial pen lift
                 G1 Z1       ; Lift head by 1
                 G0 F{1}     ; Set the feed rate
                 G1 Z{0}     ; Move the pen to just above the paper
                 G90
-                G92 X337.87 Y372.36
-                '''.format(1, self.settings.speed)
+                G92 X{2} Y{3}
+                '''.format(1, self.settings.speed, starting_xy[0], starting_xy[1])
 
         self.gcode_end = '''
                 G1 Z{0} F7000   ; Raise the pen
@@ -155,6 +159,7 @@ class Svg2GcodeConverter:
                     #gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
 
                     lengths = triangulate_lengths(self.settings, (start_x, start_y))
+                    gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(lengths[0], lengths[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
 
@@ -162,13 +167,17 @@ class Svg2GcodeConverter:
                         x = i[0][0]
                         y = i[1][0]
                         tmp_len = triangulate_lengths(self.settings, (x * scale, y * scale))
+                        gcode += "; Continuing the line ({}, {})\n".format(x * scale, y * scale)
                         gcode += "G1 X{:.3f} Y{:.3f}\n".format(tmp_len[0], tmp_len[1])
 
                 if isinstance(part, Line):
                     start_len = triangulate_lengths(self.settings, (start_x, start_y))
                     end_len = triangulate_lengths(self.settings, (end_x, end_y))
+
+                    gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_len[0], start_len[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
+                    gcode += "; Moving tip to the end of the line ({}, {})\n".format(end_x, end_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(end_len[0], end_len[1])
 
         gcode += self.gcode_end

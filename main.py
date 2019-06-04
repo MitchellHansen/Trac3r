@@ -167,8 +167,8 @@ class Tracer(Tk):
         simulator = Simulator()
         simulator.render()
 
-# settings = Settings()
-# print(triangulate_lengths(settings, (350, 0)))
+settings = Settings()
+print(triangulate_lengths(settings, (150, 0)))
 # print(triangulate_lengths(settings, (300, 300)))
 
 
