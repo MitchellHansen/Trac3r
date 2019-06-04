@@ -16,11 +16,17 @@ class Renderer():
 
     def clear_screen(self):
 
-        self.svg_context.rectangle(0, 0, self.settings.canvas_x, self.settings.canvas_y)
-        self.svg_context.set_source_rgba(1, 1, 1, 1.0)
-        self.svg_context.fill()
-        self.svg_context.set_source_rgba(0, 0, 0, 1.0)
-        self.svg_context.stroke()
+        self.svg_surface.finish()
+        self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.canvas_x, self.settings.canvas_y)
+        self.svg_context = cairo.Context(self.svg_surface)
+        self.svg_context.scale(1, 1)
+        self.svg_context.set_line_width(0.1)
+
+        # self.svg_context.rectangle(0, 0, self.settings.canvas_x, self.settings.canvas_y)
+        # self.svg_context.set_source_rgba(1, 1, 1, 1.0)
+        # self.svg_context.fill()
+        # self.svg_context.set_source_rgba(0, 0, 0, 1.0)
+        # self.svg_context.stroke()
 
     # Render GCODE from the gcode-output.gcode output file that was generated in convert_gcode
     def render_gcode(self):
@@ -115,19 +121,6 @@ class Renderer():
         os.rename("tmp/rendered-output-t.svg", "tmp/rendered-output.svg")
         self.svg_surface = cairo.SVGSurface("tmp/rendered-output-t.svg", self.settings.canvas_x, self.settings.canvas_y)
         self.svg_context = cairo.Context(self.svg_surface)
-
-    # def render(self):
-    #     self.clear_screen()
-    #     # self.render_gcode()
-    #     #
-    #     # if self.label is not None:
-    #     #     self.label.pack_forget()
-    #     #
-    #     # # Apply the rendered gcode image to the UI
-    #     # self.image_ref = ImageTk.PhotoImage(
-    #     #     Image.frombuffer("RGBA", (self.bed_actual_x, self.bed_actual_y), self.png_surface.get_data().tobytes(), "raw", "BGRA", 0, 1))
-    #     # self.label = Label(self, image=self.image_ref)
-    #     # self.label.pack(expand=True, fill="both")
 
     def toggle_flip_markers(self):
         self.settings.lift_markers = not self.settings.lift_markers

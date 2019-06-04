@@ -11,7 +11,6 @@ from ImageConverter import ImageConverter
 from Simulator import Simulator
 
 
-
 class Settings:
 
     def __init__(self):
@@ -19,8 +18,8 @@ class Settings:
         # ============ HARDCODED VALUES ===========
 
         # Canvas size
-        self.canvas_x = 300
-        self.canvas_y = 300
+        self.canvas_x = 1000
+        self.canvas_y = 1000
 
         # The position of the pulley centers in relation to the top left and right of the canvas
         self.left_pulley_x_offset  = -40
@@ -50,6 +49,8 @@ class Tracer(Tk):
     def update_blur_value(self, value):
         self.blur = value
 
+    def update_turd_value(self, value):
+        self.turd = value
 
     def __init__(self):
 
@@ -83,16 +84,19 @@ class Tracer(Tk):
         self.image_ref = None
 
         # Initialize TK
-        self.geometry("{}x{}".format(500, 500))
+        self.geometry("{}x{}".format(800, 800))
 
-        self.n = Notebook(self, width= 400, height =400)
-        self.n.pack(fill=BOTH, expand=1)
+        self.tab_bar = Notebook(self, width= 400, height =400)
+        self.tab_bar.pack(fill=BOTH, expand=1)
 
-        self.f1 = Frame(self.n)
-        self.f2 = Frame(self.n)
+        self.converted_image_tab = Frame(self.tab_bar)
+        self.original_image_tab = Frame(self.tab_bar)
 
         self.rightframe = Frame(self)
         self.rightframe.pack(side=RIGHT)
+
+        self.centerframe = Frame(self)
+        self.centerframe.pack(side=BOTTOM)
 
         self.image_select_button = Button(self.rightframe, text="Select Image", command=self.file_select_callback)
         self.image_select_button.pack()
@@ -106,13 +110,23 @@ class Tracer(Tk):
         self.lift_markers_checkbox = Checkbutton(self.rightframe, text="Lift Markers", command=self.cairo_renderer.toggle_flip_markers)
         self.lift_markers_checkbox.pack()
 
-        self.highpass_slider = Scale(self.rightframe, command=self.update_highpass_value, resolution=0.1, to=15)
+        self.highpass_label = Label(self.centerframe, text="Highpass filter", fg="black")
+        self.highpass_label.pack()
+        self.highpass_slider = Scale(self.centerframe, command=self.update_highpass_value, resolution=0.0, to=15, orient=HORIZONTAL)
         self.highpass_slider.set(self.image_converter_settings.highpass_filter)
         self.highpass_slider.pack()
 
-        self.blur_slider = Scale(self.rightframe, command=self.update_blur_value, resolution=0.1, to=5)
+        self.blur_label = Label(self.centerframe, text="Blur", fg="black")
+        self.blur_label.pack()
+        self.blur_slider = Scale(self.centerframe, command=self.update_blur_value, resolution=0.0, to=5, orient=HORIZONTAL)
         self.blur_slider.set(self.image_converter_settings.blur)
         self.blur_slider.pack()
+
+        self.turd_label = Label(self.centerframe, text="Turds", fg="black")
+        self.turd_label.pack()
+        self.turd_slider = Scale(self.centerframe, command=self.update_turd_value, resolution=0.0, to=5, orient=HORIZONTAL)
+        self.turd_slider.set(self.image_converter_settings.turd)
+        self.turd_slider.pack()
 
         # Start TK
         self.mainloop()
@@ -139,8 +153,8 @@ class Tracer(Tk):
         self.cairo_renderer.clear_screen()
         self.cairo_renderer.render_gcode()
 
-        self.f1.pack_forget()
-        self.f2.pack_forget()
+        self.converted_image_tab.pack_forget()
+        self.original_image_tab.pack_forget()
 
         if self.label is not None:
             self.label.pack_forget()
@@ -152,14 +166,14 @@ class Tracer(Tk):
       #  scale = self.winfo_width() / pil_image.width
       #  pil_image = pil_image.resize((int(scale * pil_image.width), int(scale * pil_image.height)))
         self.image_ref = ImageTk.PhotoImage(pil_image)
-        self.label = Label(self.f1, image=self.image_ref)
-        self.n.add(self.f1, text="Converted")
+        self.label = Label(self.converted_image_tab, image=self.image_ref)
+        self.tab_bar.add(self.converted_image_tab, text="Converted")
         self.label.pack(expand=True, fill="both")
 
         self.pic = ImageTk.PhotoImage(file="input-images/{}".format(self.filename))
 
-        self.label1 = Label(self.f2, image=self.pic)
-        self.n.add(self.f2, text="Original")
+        self.label1 = Label(self.original_image_tab, image=self.pic)
+        self.tab_bar.add(self.original_image_tab, text="Original")
         self.label1.pack(expand=True, fill="both")
 
     def render_simulation(self):

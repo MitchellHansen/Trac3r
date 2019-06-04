@@ -7,6 +7,8 @@ class ImageConverter:
             # mkbitmap settings
             self.highpass_filter = 0
             self.blur = 0
+            # potrace settings
+            self.turd = 0
 
     # This function takes a file and runs it through mogrify, mkbitmap, and finally potrace.
     # The flow of the intermediate files is
@@ -39,12 +41,17 @@ class ImageConverter:
 
         print("Running potrace...")
         start = time.time()
-        subprocess.call(["potrace",
-                         # "-t", "0.1",
+
+        potrace_args = ["potrace",
                          "-z", "white",
                          "-b", "svg",
                          "input-images/{}-n.pbm".format(base_name),
                          "--rotate", "0",
-                         "-o", "tmp/conversion-output.svg",
-                         ])
+                         "-o", "tmp/conversion-output.svg"]
+
+        if settings.turd > 0:
+            potrace_args.append(["-t", settings.turd])
+
+        subprocess.call(potrace_args)
+
         print("Run took [{:.2f}] seconds\n".format(time.time() - start))

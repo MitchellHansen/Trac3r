@@ -19,9 +19,10 @@ def triangulate_lengths(settings, dest_xy):
 
     return left_pulley_length, right_pulley_length
 
-
+# http://paulbourke.net/geometry/circlesphere/
+# https://math.stackexchange.com/questions/187107/calculate-coordinates-of-3rd-point-vertex-of-a-scalene-triangle-if-angles-and
+# http://xaktly.com/MathNonRightTrig.html
 def untriangulate_lengths(settings, x, y):
-    result = [0, 0]
 
     r0 = x
     r1 = y
@@ -29,6 +30,9 @@ def untriangulate_lengths(settings, x, y):
 
     a = (pow(r0, 2) - pow(r1, 2) + pow(r2, 2)) / (2 * r2)
     h = math.sqrt(pow(r0, 2) - pow(a, 2))
+
+    a = a + settings.left_pulley_x_offset
+    h = h - settings.pulley_y_droop
 
     return a, h
 
@@ -96,8 +100,8 @@ class Svg2GcodeConverter:
         max_x_dim = max(bounding_x_max, bounding_x_min)
         max_y_dim = max(bounding_y_max, bounding_y_min)
 
-        scale_x = self.settings.canvas_x  / max_x_dim
-        scale_y = self.settings.canvas_y  / max_y_dim
+        scale_x = self.settings.canvas_x / max_x_dim
+        scale_y = self.settings.canvas_y / max_y_dim
 
         scale = min(scale_x, scale_y)
         print("Scaling to : {:.5f}\n".format(scale))
@@ -105,8 +109,6 @@ class Svg2GcodeConverter:
         # Start the gcode
         gcode = ""
         gcode += self.gcode_preamble
-
-        current_position = (self.settings.canvas_x/2, self.settings.pulley_y_droop)
 
         # Walk through the paths and create the GCODE
         for path in paths:
@@ -155,11 +157,8 @@ class Svg2GcodeConverter:
                     for i in pos:
                         evals.append(curve.evaluate(i))
 
-
-                    #gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_x, start_y)
-
                     lengths = triangulate_lengths(self.settings, (start_x, start_y))
-                    gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
+                   # gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(lengths[0], lengths[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
 
@@ -167,17 +166,17 @@ class Svg2GcodeConverter:
                         x = i[0][0]
                         y = i[1][0]
                         tmp_len = triangulate_lengths(self.settings, (x * scale, y * scale))
-                        gcode += "; Continuing the line ({}, {})\n".format(x * scale, y * scale)
+                     #   gcode += "; Continuing the line ({}, {})\n".format(x * scale, y * scale)
                         gcode += "G1 X{:.3f} Y{:.3f}\n".format(tmp_len[0], tmp_len[1])
 
                 if isinstance(part, Line):
                     start_len = triangulate_lengths(self.settings, (start_x, start_y))
                     end_len = triangulate_lengths(self.settings, (end_x, end_y))
 
-                    gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
+                  #  gcode += "; Setting down tip at beginning of line ({}, {})\n".format(start_x, start_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(start_len[0], start_len[1])
                     gcode += "G1 Z{:.3f} \n".format(0)
-                    gcode += "; Moving tip to the end of the line ({}, {})\n".format(end_x, end_y)
+                   # gcode += "; Moving tip to the end of the line ({}, {})\n".format(end_x, end_y)
                     gcode += "G1 X{:.3f} Y{:.3f}\n".format(end_len[0], end_len[1])
 
         gcode += self.gcode_end
