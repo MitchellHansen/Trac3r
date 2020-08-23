@@ -18,8 +18,8 @@ class Settings:
         # ============ HARDCODED VALUES ===========
 
         # Canvas size
-        self.canvas_x = 1000
-        self.canvas_y = 1000
+        self.canvas_x = 200
+        self.canvas_y = 200
 
         # The position of the pulley centers in relation to the top left and right of the canvas
         self.left_pulley_x_offset  = -40
